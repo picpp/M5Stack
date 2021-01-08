@@ -24,6 +24,7 @@ void header(const char *string){
 
 String _readSerial(uint32_t timeout)
 {
+    Serial2.flush();
     uint64_t timeOld = millis();
     while (!Serial2.available() && !(millis() > timeOld + timeout))
     {
@@ -36,15 +37,19 @@ String _readSerial(uint32_t timeout)
         {
             str += (char) Serial2.read();
         }
-      }
+    }
     Serial.print(str);
     return str;
+}
+
+void func_full(){
+    Serial2.print(F("AT+CFUN=1\r"));
+    String func_status = _readSerial(3000);
 }
 
 void simcard_test(){
     Serial2.print(F("AT+CPIN?\r"));
     String simcard_status = _readSerial(3000);
-    Serial.print(simcard_status);
     M5.Lcd.setCursor(0, 40, 2);
     if(simcard_status == ""){
       M5.Lcd.setTextColor(WHITE, RED);
@@ -72,13 +77,8 @@ void signal_test(){
 }
 
 void GPRS_init(){
-    Serial2.print(F("AT+CIPSHUT\r"));
+    Serial2.print(F("AT+CIPSHUT;+CSTT=\"apn\";+CIICR\r"));
     String init_data = _readSerial(4000);
-    Serial2.print(F("AT+CSTT=\"CMNET\"\r"));
-    init_data = _readSerial(4000);
-    Serial2.print(F("AT+CIICR\r"));
-    init_data = _readSerial(4000);
-    Serial.print(init_data);
     M5.Lcd.setCursor(0, 90, 2);
     if((init_data.indexOf("ERROR")!= -1)||(init_data.indexOf("DEACT")!= -1)||(init_data == "")){
       M5.Lcd.setTextColor(WHITE, RED);
@@ -103,7 +103,7 @@ void ping_test(){
     }else{
       M5.Lcd.setTextColor(WHITE, 0x03E0);
       M5.Lcd.print(ping_data);
-      Serial2.print(F("AT+CIPPING=\"www.baidu.com\"\r"));
+      Serial2.print(F("AT+CIPPING=\"www.google.com\"\r"));
       delay(1000);
       ping_data = _readSerial(4000);
       M5.Lcd.setCursor(0, 160, 1);
@@ -114,9 +114,11 @@ void ping_test(){
 void setup() {
     M5.begin();
     M5.Power.begin();
+    M5.Speaker.end();
     header("SIM800L Factory Test");
     Serial2.begin(115200, SERIAL_8N1, 16, 17);
     delay(1000);
+    func_full();
     simcard_test();
     signal_test();
     GPRS_init();
